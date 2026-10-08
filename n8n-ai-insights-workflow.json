@@ -1,0 +1,99 @@
+{
+  "name": "AAvisit AI Insights",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aavisit-insights",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "name": "Insights Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "a1c4e2f0-7b3d-4c8a-9e51-2f6d8b0c3a17"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.featherless.ai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_FEATHERLESS_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\n  \"model\": \"Qwen/Qwen2.5-7B-Instruct\",\n  \"temperature\": 0.4,\n  \"max_tokens\": 1000,\n  \"messages\": [\n    { \"role\": \"system\", \"content\": \"You are an AI growth analyst for website owners. You receive website analytics as JSON. Reply with ONLY valid JSON, no markdown and no extra text, using exactly these keys: audience_profile (string, 2 to 3 sentences inferring who the visitors are from their countries and traffic hours), key_findings (array of 3 short strings), page_fixes (array of objects with keys page, issue, fix, for pages whose avg_seconds is below target_seconds), email (object with keys send_time as HH:MM set 30 minutes before peak_hour, subject, and body of 70 to 100 words written for this audience, friendly, with one clear call to action).\" },\n    { \"role\": \"user\", \"content\": {{ JSON.stringify('Website analytics: ' + JSON.stringify($json.body)) }} }\n  ]\n}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "name": "Featherless AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.choices[0].message.content }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Insights Webhook": {
+      "main": [
+        [
+          {
+            "node": "Featherless AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Featherless AI": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

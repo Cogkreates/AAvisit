@@ -1,0 +1,154 @@
+{
+  "name": "AAvisit Banner",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aavisit-banner",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "name": "Banner Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        300
+      ],
+      "webhookId": "c3e9a7b2-5d14-4f6a-8b30-9a1e2c7d4f58"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://yce-api-01.makeupar.com/s2s/v2.0/task/text-to-image/youcam",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_YOUCAM_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ model: 'youcam-image-v2', prompt: $json.body.prompt, negative_prompt: 'text, letters, words, watermark, logo, blurry, low quality', size: '1664*928', prompt_extend: true }) }}",
+        "options": {}
+      },
+      "name": "Create Banner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "name": "Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://yce-api-01.makeupar.com/s2s/v2.0/task/text-to-image/youcam/{{ $('Create Banner').item.json.data.task_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_YOUCAM_API_KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Get Banner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        860,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1080,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Banner Webhook": {
+      "main": [
+        [
+          {
+            "node": "Create Banner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Banner": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Get Banner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Banner": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
