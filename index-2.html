@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AAvisit - AI website analytics</title>
+<style>
+  * { box-sizing: border-box; }
+  :root { --bg:#0b0b10; --card:#15151c; --line:#242430; --mut:#8b8b9a; --or:#ff6a00; --or2:#ffb347; --good:#3ddc97; --bad:#ff5d6c; }
+  body { margin:0; font-family:-apple-system,Segoe UI,Roboto,sans-serif; background:radial-gradient(circle at 20% -10%,#2a1608 0,var(--bg) 45%); color:#eee; min-height:100vh; }
+  .wrap { max-width:460px; margin:auto; padding:20px 16px 40px; }
+  .brand { font-weight:700; font-size:22px; margin:6px 0 22px; }
+  .brand span { color:var(--or); }
+  h1 { font-size:30px; line-height:1.15; margin:0 0 12px; }
+  h2 { margin:0 0 6px; font-size:22px; }
+  .lead { color:#b9b9c6; line-height:1.55; margin:0 0 20px; }
+  .btn { display:block; width:100%; background:var(--or); color:#fff; border:0; padding:14px; border-radius:12px; font-size:16px; font-weight:600; margin-bottom:10px; text-align:center; text-decoration:none; }
+  .btn.alt { background:#1c1c25; border:1px solid var(--line); color:#ddd; }
+  .btn:disabled { opacity:.6; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px; }
+  label { display:block; font-size:12px; color:var(--mut); margin:12px 0 6px; }
+  input { width:100%; padding:12px; border-radius:10px; border:1px solid #2c2c3a; background:#0f0f14; color:#eee; font-size:15px; }
+  .err { color:var(--bad); font-size:13px; min-height:18px; margin:10px 0; }
+  .hidden { display:none; }
+  pre { background:#0f0f14; border:1px solid #2c2c3a; border-radius:10px; padding:12px; font-size:12px; white-space:pre-wrap; word-break:break-all; color:#ffd9b3; margin:8px 0; }
+  .n { display:inline-grid; place-items:center; width:22px; height:22px; border-radius:50%; background:var(--or); color:#fff; font-size:12px; font-weight:700; margin-right:8px; }
+  .step-t { font-weight:600; margin-bottom:4px; }
+  .small { font-size:13px; color:var(--mut); line-height:1.5; }
+  .feat { display:grid; gap:10px; margin:22px 0; }
+  .feat div { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; font-size:13px; color:#b9b9c6; }
+  .feat b { color:var(--or2); display:block; margin-bottom:2px; }
+  .pulse { display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--or2); margin-right:8px; animation:p 1.4s infinite; }
+  @keyframes p { 0%{opacity:1} 50%{opacity:.3} 100%{opacity:1} }
+  .ok .pulse { background:var(--good); animation:none; }
+  .back { background:none; border:0; color:var(--mut); font-size:13px; padding:0; margin-bottom:12px; }
+  .link { color:var(--or2); background:none; border:0; font-size:14px; padding:0; text-decoration:underline; }
+  .tag { display:inline-block; background:rgba(255,106,0,.15); color:var(--or2); font-size:11px; padding:3px 10px; border-radius:10px; margin-bottom:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">AA<span>visit</span></div>
+
+  <section id="v-landing">
+    <span class="tag">AI-powered analytics</span>
+    <h1>Know your visitors. Let AI do the thinking.</h1>
+    <p class="lead">Add one line of code to your website. AAvisit tracks who visits and when, researches your audience, tells you what to fix on your pages, and writes the email to send at your peak hour.</p>
+    <div id="welcome" class="card hidden">
+      <div class="step-t">Welcome back, <span id="wb-name"></span></div>
+      <a class="btn" href="dashboard.html" style="margin:10px 0 6px">Open my dashboard</a>
+      <button class="link" onclick="logout()">Log out</button>
+    </div>
+    <button class="btn" onclick="show('v-signup')">Get started free</button>
+    <button class="btn alt" onclick="show('v-login')">Log in</button>
+    <div class="feat">
+      <div><b>One snippet</b>Paste it into any website and tracking starts.</div>
+      <div><b>Audience and time analysis</b>Countries, peak hours, and time on each page.</div>
+      <div><b>AI recommendations and emails</b>Page fixes, a drafted email, and a banner for your peak hour.</div>
+    </div>
+  </section>
+
+  <section id="v-signup" class="hidden">
+    <button class="back" onclick="show('v-landing')">&larr; Back</button>
+    <h2>Create your account</h2>
+    <p class="small">You will get your own tracker in the next step.</p>
+    <div class="card">
+      <label>Your name</label><input id="su-name" placeholder="Ada Okafor" autocomplete="name">
+      <label>Email</label><input id="su-email" type="email" placeholder="you@company.com" autocomplete="email">
+      <label>Website</label><input id="su-domain" placeholder="mystore.com">
+      <label>Password</label><input id="su-pw" type="password" placeholder="At least 6 characters" autocomplete="new-password">
+      <div class="err" id="su-err"></div>
+      <button class="btn" id="su-btn" onclick="signup()">Create account</button>
+    </div>
+  </section>
+
+  <section id="v-login" class="hidden">
+    <button class="back" onclick="show('v-landing')">&larr; Back</button>
+    <h2>Welcome back</h2>
+    <div class="card">
+      <label>Email</label><input id="li-email" type="email" autocomplete="email">
+      <label>Password</label><input id="li-pw" type="password" autocomplete="current-password">
+      <div class="err" id="li-err"></div>
+      <button class="btn" id="li-btn" onclick="login()">Log in</button>
+    </div>
+  </section>
+
+  <section id="v-onboard" class="hidden">
+    <span class="tag">Account created</span>
+    <h2>Welcome, <span id="ob-name"></span></h2>
+    <p class="small">Your site code: <b id="ob-code" style="color:#ffb347"></b></p>
+
+    <div class="card">
+      <div class="step-t"><span class="n">1</span>Copy your tracker</div>
+      <pre id="ob-snippet"></pre>
+      <button class="btn alt" style="margin:0" onclick="copySnippet()">Copy snippet</button>
+    </div>
+    <div class="card">
+      <div class="step-t"><span class="n">2</span>Add it to your website</div>
+      <div class="small">Paste it just before the closing body tag on every page you want to track.</div>
+    </div>
+    <div class="card">
+      <div class="step-t"><span class="n">3</span>Test it</div>
+      <div class="small" style="margin-bottom:10px">No website handy? Open our sample store. It already has your snippet.</div>
+      <a class="btn alt" id="ob-test" target="_blank" style="margin:0 0 12px">Open test page</a>
+      <div id="ob-status" class="small"><span class="pulse"></span>Waiting for your first visit...</div>
+    </div>
+    <a class="btn" id="ob-dash" href="dashboard.html">Go to my dashboard</a>
+  </section>
+</div>
+
+<script>
+var CONFIG = { ENDPOINT: "YOUR_MOMEN_GRAPHQL_ENDPOINT", SITE_TABLE: "ud_site_bc2226", VISIT_TABLE: "ud_visit_a34c37", VISIT_SITE_FIELD: "ud_site_id_010e69" };
+var SF = { name: "ud_name_30f398", domain: "ud_domain_f0de0c", email: "ud_email_d498fd", hash: "ud_password_hash_b56ac4", code: "ud_site_code_1d7734" };
+var COUNTRY_FIELD = "ud_country_a82290";
+
+function $(id) { return document.getElementById(id); }
+function val(id) { return $(id).value.trim(); }
+function setErr(id, m) { $(id).textContent = m || ""; }
+function show(id) {
+  ["v-landing", "v-signup", "v-login", "v-onboard"].forEach(function (v) { $(v).classList.add("hidden"); });
+  $(id).classList.remove("hidden");
+  window.scrollTo(0, 0);
+}
+
+function gql(query, variables) {
+  return fetch(CONFIG.ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query: query, variables: variables || {} }) })
+    .then(function (r) { return r.json(); });
+}
+
+function discover() {
+  var cached = null; try { cached = JSON.parse(sessionStorage.getItem("aavisit_schema")); } catch (e) {}
+  if (cached && cached.siteTable && cached.visitSiteField) return Promise.resolve(cached);
+  var out = { siteTable: CONFIG.SITE_TABLE, visitSiteField: CONFIG.VISIT_SITE_FIELD };
+  if (out.siteTable && out.visitSiteField) return Promise.resolve(out);
+  return gql("{ __schema { queryType { fields { name } } } }").then(function (res) {
+    var names = (res && res.data && res.data.__schema.queryType.fields || []).map(function (f) { return f.name; });
+    if (!out.siteTable) out.siteTable = names.filter(function (n) { return /^ud_site_[0-9a-f]{6}$/.test(n); })[0] || "";
+    return gql('{ __type(name: "' + CONFIG.VISIT_TABLE + '") { fields { name } } }');
+  }).then(function (res) {
+    var f = (res && res.data && res.data.__type && res.data.__type.fields || []).map(function (x) { return x.name; });
+    if (!out.visitSiteField) out.visitSiteField = f.filter(function (n) { return /^ud_site_id_[0-9a-f]{6}$/.test(n); })[0] || f.filter(function (n) { return /site/i.test(n); })[0] || "";
+    if (!out.siteTable || !out.visitSiteField) throw new Error("Could not auto-detect the Momen table names. Set SITE_TABLE and VISIT_SITE_FIELD at the top of this file.");
+    try { sessionStorage.setItem("aavisit_schema", JSON.stringify(out)); } catch (e) {}
+    return out;
+  });
+}
+
+function sha256(str) {
+  if (window.crypto && crypto.subtle && window.TextEncoder) {
+    return crypto.subtle.digest("SHA-256", new TextEncoder().encode(str)).then(function (buf) {
+      return Array.prototype.map.call(new Uint8Array(buf), function (b) { return ("0" + b.toString(16)).slice(-2); }).join("");
+    });
+  }
+  var h = 5381; for (var i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+  return Promise.resolve("f" + (h >>> 0).toString(16));
+}
+
+function setSession(s) { localStorage.setItem("aavisit_session", JSON.stringify(s)); }
+function getSession() { try { return JSON.parse(localStorage.getItem("aavisit_session")); } catch (e) { return null; } }
+function logout() { localStorage.removeItem("aavisit_session"); location.reload(); }
+
+function signup() {
+  var name = val("su-name"), email = val("su-email").toLowerCase(), domain = val("su-domain"), pw = $("su-pw").value;
+  setErr("su-err", "");
+  if (!name || email.indexOf("@") < 1 || !domain || pw.length < 6) { setErr("su-err", "Fill every field. Password needs at least 6 characters."); return; }
+  var btn = $("su-btn"); btn.disabled = true; btn.textContent = "Creating...";
+  var sc;
+  discover().then(function (s) {
+    sc = s;
+    var q = "query($e: String!) { " + sc.siteTable + "(where: {" + SF.email + ": {_eq: $e}}, limit: 1) { " + SF.code + " } }";
+    return gql(q, { e: email });
+  }).then(function (res) {
+    if (res.errors) throw new Error("Lookup failed: " + JSON.stringify(res.errors).slice(0, 180));
+    var rows = res.data && res.data[sc.siteTable];
+    if (rows && rows.length) throw new Error("An account with this email already exists. Log in instead.");
+    return sha256(email + ":" + pw);
+  }).then(function (hash) {
+    var code = "aav_" + Math.random().toString(36).slice(2, 10);
+    var obj = {};
+    obj[SF.name] = name; obj[SF.domain] = domain; obj[SF.email] = email; obj[SF.hash] = hash; obj[SF.code] = code;
+    var m = "mutation($object: " + sc.siteTable + "_insert_input!) { insert_" + sc.siteTable + "_one(object: $object) { id } }";
+    return gql(m, { object: obj }).then(function (res) {
+      if (!res.data || !res.data["insert_" + sc.siteTable + "_one"]) throw new Error("Could not create account: " + JSON.stringify(res.errors || res).slice(0, 200));
+      return { code: code, name: name, domain: domain, email: email };
+    });
+  }).then(function (sess) {
+    setSession(sess); startOnboarding(sess);
+  }).catch(function (e) {
+    setErr("su-err", e.message);
+  }).then(function () { btn.disabled = false; btn.textContent = "Create account"; });
+}
+
+function login() {
+  var email = val("li-email").toLowerCase(), pw = $("li-pw").value;
+  setErr("li-err", "");
+  if (!email || !pw) { setErr("li-err", "Enter your email and password."); return; }
+  var btn = $("li-btn"); btn.disabled = true; btn.textContent = "Checking...";
+  var sc;
+  discover().then(function (s) {
+    sc = s;
+    return sha256(email + ":" + pw);
+  }).then(function (hash) {
+    var q = "query($e: String!, $h: String!) { " + sc.siteTable + "(where: {" + SF.email + ": {_eq: $e}, " + SF.hash + ": {_eq: $h}}, limit: 1) { " + SF.name + " " + SF.domain + " " + SF.code + " } }";
+    return gql(q, { e: email, h: hash });
+  }).then(function (res) {
+    if (res.errors) throw new Error("Login failed: " + JSON.stringify(res.errors).slice(0, 180));
+    var rows = res.data && res.data[sc.siteTable];
+    if (!rows || !rows.length) throw new Error("Wrong email or password.");
+    var r = rows[0];
+    setSession({ code: r[SF.code], name: r[SF.name], domain: r[SF.domain], email: email });
+    location.href = "dashboard.html";
+  }).catch(function (e) {
+    setErr("li-err", e.message);
+  }).then(function () { btn.disabled = false; btn.textContent = "Log in"; });
+}
+
+var timer = null;
+function startOnboarding(sess) {
+  show("v-onboard");
+  $("ob-name").textContent = sess.name;
+  $("ob-code").textContent = sess.code;
+  var origin = location.protocol.indexOf("http") === 0 ? location.origin : "https://YOUR-SITE.netlify.app";
+  $("ob-snippet").textContent = '<script src="' + origin + '/tracker.js" data-site="' + sess.code + '" async><\/script>';
+  $("ob-test").href = "demo.html?site=" + encodeURIComponent(sess.code);
+  var statusEl = $("ob-status");
+  statusEl.className = "small"; statusEl.innerHTML = '<span class="pulse"></span>Waiting for your first visit...';
+
+  function poll() {
+    discover().then(function (s) {
+      var q = "query($s: String!) { " + CONFIG.VISIT_TABLE + "(where: {" + s.visitSiteField + ": {_eq: $s}}, limit: 1) { id " + COUNTRY_FIELD + " } }";
+      return gql(q, { s: sess.code });
+    }).then(function (res) {
+      var rows = res.data && res.data[CONFIG.VISIT_TABLE];
+      if (rows && rows.length) {
+        clearInterval(timer);
+        statusEl.className = "small ok";
+        statusEl.innerHTML = '<span class="pulse"></span><b style="color:#3ddc97">First visit detected from ' + (rows[0][COUNTRY_FIELD] || "Unknown").replace(/[<>&]/g, "") + '!</b> Your tracker works.';
+      }
+    }).catch(function () {});
+  }
+  clearInterval(timer);
+  timer = setInterval(poll, 4000);
+  poll();
+}
+
+function copySnippet() {
+  var t = $("ob-snippet").textContent;
+  if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(t).then(function () { alert("Copied"); }, function () { alert("Press and hold the code to copy it."); }); }
+  else { alert("Press and hold the code to copy it."); }
+}
+
+(function init() {
+  var s = getSession();
+  if (s && s.code) { $("welcome").classList.remove("hidden"); $("wb-name").textContent = s.name || "there"; }
+})();
+</script>
+</body>
+</html>
