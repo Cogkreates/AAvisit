@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AAvisit Analytics</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  :root { --bg:#0b0b10; --card:#15151c; --line:#242430; --mut:#8b8b9a; --or:#ff6a00; --or2:#ffb347; --good:#3ddc97; --bad:#ff5d6c; --blue:#4dd0e1; }
+  body { margin:0; font-family: -apple-system, Segoe UI, Roboto, sans-serif; background: radial-gradient(circle at 20% -10%, #2a1608 0, var(--bg) 40%); color:#eee; }
+  header { position: sticky; top:0; z-index:5; background: rgba(11,11,16,.85); backdrop-filter: blur(8px); border-bottom:1px solid var(--line); padding:12px 14px; }
+  .top { display:flex; justify-content:space-between; align-items:center; }
+  .brand { font-weight:700; font-size:18px; letter-spacing:.3px; }
+  .brand span { color: var(--or); }
+  .live { font-size:11px; color: var(--good); display:flex; align-items:center; gap:6px; }
+  .dot { width:8px; height:8px; border-radius:50%; background: var(--good); animation: pulse 1.6s infinite; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(61,220,151,.6)} 100%{box-shadow:0 0 0 10px rgba(61,220,151,0)} }
+  .controls { display:flex; justify-content:space-between; align-items:center; margin-top:10px; gap:8px; }
+  .pills { display:flex; gap:6px; }
+  .pill { background:#1c1c25; color:var(--mut); border:1px solid var(--line); padding:6px 12px; border-radius:20px; font-size:12px; }
+  .pill.on { background: var(--or); color:#fff; border-color: var(--or); }
+  .toggle { font-size:12px; color:var(--mut); display:flex; gap:5px; align-items:center; }
+  #msg { color: var(--bad); font-size:12px; padding:6px 14px 0; min-height:6px; }
+  main { padding:12px; max-width:980px; margin:auto; }
+  .grid-kpi { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+  .card { background: var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px; }
+  .kpi small { color:var(--mut); font-size:11px; text-transform:uppercase; letter-spacing:.6px; }
+  .kpi .val { font-size:26px; font-weight:700; margin:4px 0 2px; }
+  .delta { font-size:11px; }
+  .up { color:var(--good); } .down { color:var(--bad); } .flat { color:var(--mut); }
+  .kpi svg { width:100%; height:26px; margin-top:6px; }
+  h3 { margin:0 0 4px; font-size:14px; }
+  .sub { color:var(--mut); font-size:11px; margin-bottom:10px; }
+  .two { display:grid; grid-template-columns:1fr; gap:12px; }
+  @media (min-width:760px){ .two{ grid-template-columns:1fr 1fr; } .grid-kpi{ grid-template-columns:repeat(4,1fr);} }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip { background:#1d1d27; border:1px solid var(--line); border-radius:10px; padding:8px 10px; font-size:12px; line-height:1.4; }
+  .chip b { color: var(--or2); }
+  .row { display:grid; grid-template-columns: 92px 1fr 56px; align-items:center; gap:8px; font-size:12px; margin:7px 0; }
+  .bar { height:8px; background:#22222d; border-radius:4px; overflow:hidden; }
+  .bar i { display:block; height:100%; background: linear-gradient(90deg,var(--or),var(--or2)); }
+  .num { text-align:right; color:var(--mut); }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th { text-align:left; color:var(--mut); font-weight:500; padding:6px 4px; border-bottom:1px solid var(--line); }
+  td { padding:9px 4px; border-bottom:1px solid #1d1d27; }
+  .badge { padding:2px 8px; border-radius:10px; font-size:10px; font-weight:600; }
+  .b-good { background:rgba(61,220,151,.15); color:var(--good); }
+  .b-bad { background:rgba(255,93,108,.15); color:var(--bad); }
+  .b-ok { background:rgba(139,139,154,.18); color:#bbb; }
+  .heat { display:grid; grid-template-columns: 26px repeat(24, 1fr); gap:2px; font-size:9px; color:var(--mut); }
+  .heat div.c { aspect-ratio:1; border-radius:3px; }
+  .heat div.l { display:flex; align-items:center; }
+  .hl { text-align:center; }
+  .score { display:flex; align-items:center; gap:14px; }
+  .ring { width:84px; height:84px; border-radius:50%; display:grid; place-items:center; font-size:22px; font-weight:700; }
+  .ring span { background:var(--card); width:66px; height:66px; border-radius:50%; display:grid; place-items:center; }
+  #ai { color:#b9b9c6; font-size:13px; line-height:1.55; }
+  .ai-tag { display:inline-block; background:rgba(255,106,0,.15); color:var(--or2); font-size:10px; padding:2px 8px; border-radius:10px; margin-bottom:8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <div class="brand">AA<span>visit</span></div>
+    <div class="live"><div class="dot"></div><span id="updated">connecting</span><span id="who" style="color:#8b8b9a;margin-left:8px"></span><a href="#" id="logout" style="color:#ff8a3d;margin-left:8px">Log out</a></div>
+  </div>
+  <div class="controls">
+    <div class="pills" id="pills">
+      <button class="pill" data-d="7">7D</button>
+      <button class="pill on" data-d="14">14D</button>
+      <button class="pill" data-d="30">30D</button>
+      <button class="pill" data-d="0">All</button>
+    </div>
+    <label class="toggle"><input type="checkbox" id="demo"> Sample data</label>
+  </div>
+</header>
+<div id="msg"></div>
+
+<main>
+  <div class="grid-kpi">
+    <div class="card kpi"><small>Visits</small><div class="val" id="k-total">-</div><div class="delta" id="d-total"></div><svg id="s-total"></svg></div>
+    <div class="card kpi"><small>Unique visitors</small><div class="val" id="k-uniq">-</div><div class="delta" id="d-uniq"></div><svg id="s-uniq"></svg></div>
+    <div class="card kpi"><small>Avg time on page</small><div class="val" id="k-avg">-</div><div class="delta" id="d-avg"></div><svg id="s-avg"></svg></div>
+    <div class="card kpi"><small>Bounce rate (&lt;10s)</small><div class="val" id="k-bounce">-</div><div class="delta" id="d-bounce"></div><svg id="s-bounce"></svg></div>
+  </div>
+
+  <div class="card">
+    <h3>Signals</h3>
+    <div class="sub">Patterns detected automatically in your traffic</div>
+    <div class="chips" id="signals"></div>
+  </div>
+
+  <div class="card">
+    <h3>Visits over time</h3>
+    <div class="sub">Daily traffic</div>
+    <canvas id="c-daily" height="170"></canvas>
+  </div>
+
+  <div class="two">
+    <div class="card">
+      <h3>Engagement score</h3>
+      <div class="sub">Blends time on page and bounce rate</div>
+      <div class="score">
+        <div class="ring" id="ring"><span id="score">-</span></div>
+        <div style="font-size:12px;color:var(--mut);line-height:1.5" id="score-note"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>New vs returning</h3>
+      <div class="sub">Share of repeat visitors</div>
+      <canvas id="c-ret" height="140"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Traffic heatmap</h3>
+    <div class="sub">When visitors arrive: day of week by hour</div>
+    <div class="heat" id="heat"></div>
+  </div>
+
+  <div class="two">
+    <div class="card">
+      <h3>Top countries</h3>
+      <div class="sub">Share of visits and average time spent</div>
+      <div id="countries"></div>
+    </div>
+    <div class="card">
+      <h3>Time spent distribution</h3>
+      <div class="sub">How long visitors stay</div>
+      <canvas id="c-time" height="190"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Pages: actual vs expected time</h3>
+    <div class="sub">Gap between how long people stay and how long they should</div>
+    <table>
+      <thead><tr><th>Page</th><th>Visits</th><th>Actual</th><th>Target</th><th>Status</th></tr></thead>
+      <tbody id="pages"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <span class="ai-tag">AI INSIGHTS</span>
+    <h3>Audience research and recommendations</h3>
+    <button id="ai-btn" style="margin-bottom:10px">Generate AI insights</button>
+    <div id="ai">Tap the button. The AI reads these stats and returns your audience profile, page fixes to close the time gaps, and a ready-to-send email timed to your peak hour.</div>
+  </div>
+</main>
+
+<script>
+var ENDPOINT = "YOUR_MOMEN_GRAPHQL_ENDPOINT";
+var T = "ud_visit_a34c37";
+var session = null;
+try { session = JSON.parse(localStorage.getItem("aavisit_session")); } catch (e) {}
+if (!session || !session.code) { location.replace("index.html"); throw new Error("not logged in"); }
+var VISIT_SITE_FIELD = "ud_site_id_010e69";   // leave empty to auto-detect, or paste the API name of the Site_Id column
+document.getElementById("who").textContent = session.domain || session.name || "";
+document.getElementById("logout").addEventListener("click", function (e) { e.preventDefault(); localStorage.removeItem("aavisit_session"); location.href = "index.html"; });
+
+function gqlRaw(query, variables) {
+  return fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query: query, variables: variables || {} }) })
+    .then(function (r) { return r.json(); });
+}
+function siteField() {
+  if (VISIT_SITE_FIELD) return Promise.resolve(VISIT_SITE_FIELD);
+  var c = null; try { c = sessionStorage.getItem("aavisit_site_field"); } catch (e) {}
+  if (c) return Promise.resolve(c);
+  return gqlRaw('{ __type(name: "' + T + '") { fields { name } } }').then(function (res) {
+    var f = (res && res.data && res.data.__type && res.data.__type.fields || []).map(function (x) { return x.name; });
+    var hit = f.filter(function (n) { return /^ud_site_id_[0-9a-f]{6}$/.test(n); })[0] || f.filter(function (n) { return /site/i.test(n); })[0];
+    if (!hit) throw new Error("Could not find the Site_Id column. Set VISIT_SITE_FIELD at the top of the script.");
+    try { sessionStorage.setItem("aavisit_site_field", hit); } catch (e) {}
+    return hit;
+  });
+}
+var F = { visitor:"ud_visitor_id_d9b34e", country:"ud_country_a82290", page:"ud_page_161689", duration:"ud_duration_7c678d", visitedAt:"ud_visited_at_3b6084" };
+var TARGETS = { "/":45, "/pricing":90, "/blog":150, "/contact":60 };
+var DEFAULT_TARGET = 60;
+var DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+var state = { days:14, raw:[] };
+var charts = {};
+var msg = document.getElementById("msg");
+
+function norm(o) {
+  var d = new Date(o[F.visitedAt]);
+  var s = parseInt(o[F.duration], 10);
+  return { c:o[F.country]||"Unknown", p:o[F.page]||"/", s:isNaN(s)?0:s, d:d, v:o[F.visitor]||"?" };
+}
+
+function fakeData() {
+  var countries = ["Nigeria","United States","India","United Kingdom","Ghana","Germany","Canada"];
+  var weights = [30,22,16,10,8,8,6];
+  var pages = ["/","/pricing","/blog","/contact"];
+  var pool = []; for (var i=0;i<320;i++) pool.push("demo"+i);
+  var rows = [];
+  for (var n=0;n<1100;n++) {
+    var r = Math.random()*100, acc=0, c=countries[0];
+    for (var j=0;j<countries.length;j++){ acc+=weights[j]; if(r<acc){ c=countries[j]; break; } }
+    var hour = Math.round(Math.max(0,Math.min(23, 15+(Math.random()+Math.random()+Math.random()-1.5)*8)));
+    var d = new Date(); d.setDate(d.getDate()-Math.floor(Math.pow(Math.random(),1.2)*30));
+    d.setHours(hour, Math.floor(Math.random()*60), 0, 0);
+    var wk = (d.getDay()+6)%7; if (wk>=5 && Math.random()<.45) { n--; continue; }
+    var page = pages[Math.floor(Math.random()*4)];
+    var base = {"/":28,"/pricing":55,"/blog":130,"/contact":40}[page];
+    var dur = Math.round(base*(0.3+Math.random()*1.4) * (Math.random()<.22?0.1:1));
+    var o = {}; o[F.visitor]=pool[Math.floor(Math.random()*pool.length)]; o[F.country]=c; o[F.page]=page;
+    o[F.duration]=String(dur); o[F.visitedAt]=d.toISOString(); rows.push(o);
+  }
+  return Promise.resolve(rows);
+}
+
+function fetchReal() {
+  return siteField().then(function (sf) {
+    var cols = Object.keys(F).map(function (k) { return F[k]; }).join(" ");
+    var q = "query($s: String!) { " + T + "(where: {" + sf + ": {_eq: $s}}, limit: 5000) { " + cols + " } }";
+    return gqlRaw(q, { s: session.code });
+  }).then(function (res) {
+    if (res.errors || !res.data) throw new Error(JSON.stringify(res.errors || res).slice(0, 250));
+    return res.data[T];
+  });
+}
+
+function stats(rows) {
+  var uniq = {}, sum = 0, bounce = 0;
+  rows.forEach(function(r){ uniq[r.v]=1; sum+=r.s; if(r.s<10) bounce++; });
+  var n = rows.length;
+  return { total:n, uniq:Object.keys(uniq).length, avg:n?Math.round(sum/n):0, bounce:n?Math.round(bounce/n*100):0 };
+}
+
+function dailySeries(rows, days, fn) {
+  var buckets = []; var now = new Date(); now.setHours(0,0,0,0);
+  for (var i=days-1;i>=0;i--) { var d=new Date(now); d.setDate(d.getDate()-i); buckets.push({t:d.getTime(), rows:[]}); }
+  rows.forEach(function(r){
+    var t = new Date(r.d); t.setHours(0,0,0,0);
+    for (var i=0;i<buckets.length;i++) if (buckets[i].t===t.getTime()) { buckets[i].rows.push(r); break; }
+  });
+  return buckets.map(function(b){ return fn(b.rows); });
+}
+
+function spark(id, series, color) {
+  var el = document.getElementById(id);
+  var max = Math.max.apply(null, series.concat([1])), w=100, h=26;
+  var pts = series.map(function(v,i){ return (i/(series.length-1||1)*w).toFixed(1)+","+(h-2-(v/max)*(h-6)).toFixed(1); }).join(" ");
+  el.setAttribute("viewBox","0 0 "+w+" "+h); el.setAttribute("preserveAspectRatio","none");
+  el.innerHTML = '<polyline fill="none" stroke="'+color+'" stroke-width="1.6" points="'+pts+'"/>';
+}
+
+function delta(id, cur, prev, invert) {
+  var el = document.getElementById(id);
+  if (!prev) { el.innerHTML = '<span class="flat">no prior period</span>'; return; }
+  var pct = Math.round((cur-prev)/prev*100);
+  if (pct===0) { el.innerHTML = '<span class="flat">no change</span>'; return; }
+  var good = invert ? pct<0 : pct>0;
+  el.innerHTML = '<span class="'+(good?"up":"down")+'">'+(pct>0?"▲ ":"▼ ")+Math.abs(pct)+'%</span> <span class="flat">vs previous</span>';
+}
+
+function drawChart(id, cfg) { if (charts[id]) charts[id].destroy(); charts[id] = new Chart(document.getElementById(id), cfg); }
+var axis = { ticks:{color:"#8b8b9a",font:{size:10}}, grid:{color:"#20202a"} };
+
+function render() {
+  var all = state.raw.map(norm).filter(function(r){ return !isNaN(r.d); });
+  var now = Date.now(), D = state.days;
+  var cur = D ? all.filter(function(r){ return now-r.d.getTime() <= D*864e5; }) : all;
+  var prev = D ? all.filter(function(r){ var a=now-r.d.getTime(); return a>D*864e5 && a<=2*D*864e5; }) : [];
+  var sc = stats(cur), sp = stats(prev);
+  var sd = D || 14;
+
+  document.getElementById("k-total").textContent = sc.total;
+  document.getElementById("k-uniq").textContent = sc.uniq;
+  document.getElementById("k-avg").textContent = sc.avg + "s";
+  document.getElementById("k-bounce").textContent = sc.bounce + "%";
+  delta("d-total", sc.total, sp.total); delta("d-uniq", sc.uniq, sp.uniq);
+  delta("d-avg", sc.avg, sp.avg); delta("d-bounce", sc.bounce, sp.bounce, true);
+
+  spark("s-total", dailySeries(all, sd, function(r){return r.length;}), "#ff8a3d");
+  spark("s-uniq", dailySeries(all, sd, function(r){var u={};r.forEach(function(x){u[x.v]=1;});return Object.keys(u).length;}), "#4dd0e1");
+  spark("s-avg", dailySeries(all, sd, function(r){return r.length?r.reduce(function(a,b){return a+b.s;},0)/r.length:0;}), "#3ddc97");
+  spark("s-bounce", dailySeries(all, sd, function(r){return r.length?r.filter(function(x){return x.s<10;}).length/r.length*100:0;}), "#ff5d6c");
+
+  // daily
+  var labels = []; var nowD = new Date();
+  for (var i=sd-1;i>=0;i--){ var d=new Date(nowD); d.setDate(d.getDate()-i); labels.push((d.getMonth()+1)+"/"+d.getDate()); }
+  drawChart("c-daily", { type:"line", data:{ labels:labels, datasets:[{ data:dailySeries(all, sd, function(r){return r.length;}), borderColor:"#ff6a00", backgroundColor:"rgba(255,106,0,.15)", fill:true, tension:.35, pointRadius:0 }] },
+    options:{ plugins:{legend:{display:false}}, scales:{x:axis,y:Object.assign({beginAtZero:true},axis)} } });
+
+  // heatmap
+  var m = []; for (var a=0;a<7;a++) m.push(new Array(24).fill(0));
+  var hourCount = new Array(24).fill(0), dayCount = new Array(7).fill(0);
+  cur.forEach(function(r){ var wd=(r.d.getDay()+6)%7, h=r.d.getHours(); m[wd][h]++; hourCount[h]++; dayCount[wd]++; });
+  var mx = Math.max.apply(null, [].concat.apply([], m).concat([1]));
+  var heat = '<div></div>';
+  for (var h=0;h<24;h++) heat += '<div class="hl">'+(h%6===0?h:"")+'</div>';
+  for (var w=0;w<7;w++){
+    heat += '<div class="l">'+DAYS[w]+'</div>';
+    for (var h2=0;h2<24;h2++){ var v=m[w][h2]; heat += '<div class="c" title="'+DAYS[w]+" "+h2+':00 · '+v+' visits" style="background:rgba(255,106,0,'+(v?(0.12+0.88*v/mx).toFixed(2):0.05)+')"></div>'; }
+  }
+  document.getElementById("heat").innerHTML = heat;
+
+  // countries
+  var cc = {}, cs = {};
+  cur.forEach(function(r){ cc[r.c]=(cc[r.c]||0)+1; cs[r.c]=(cs[r.c]||0)+r.s; });
+  var top = Object.keys(cc).sort(function(a,b){return cc[b]-cc[a];}).slice(0,6);
+  document.getElementById("countries").innerHTML = top.map(function(c){
+    var share = Math.round(cc[c]/(cur.length||1)*100);
+    return '<div class="row"><div>'+c+'</div><div class="bar"><i style="width:'+share+'%"></i></div><div class="num">'+share+'% · '+Math.round(cs[c]/cc[c])+'s</div></div>';
+  }).join("") || '<div class="sub">No data yet</div>';
+
+  // time distribution
+  var bk = {"0-10s":0,"10-30s":0,"30-60s":0,"1-3m":0,"3m+":0};
+  cur.forEach(function(r){ var s=r.s; if(s<10)bk["0-10s"]++; else if(s<30)bk["10-30s"]++; else if(s<60)bk["30-60s"]++; else if(s<180)bk["1-3m"]++; else bk["3m+"]++; });
+  drawChart("c-time", { type:"bar", data:{ labels:Object.keys(bk), datasets:[{ data:Object.keys(bk).map(function(k){return bk[k];}), backgroundColor:["#ff5d6c","#ffb347","#ffd166","#4dd0e1","#3ddc97"], borderRadius:6 }] },
+    options:{ plugins:{legend:{display:false}}, scales:{x:axis,y:Object.assign({beginAtZero:true},axis)} } });
+
+  // returning
+  var vc = {}; cur.forEach(function(r){ vc[r.v]=(vc[r.v]||0)+1; });
+  var ret = Object.keys(vc).filter(function(k){return vc[k]>1;}).length, nw = Object.keys(vc).length-ret;
+  drawChart("c-ret", { type:"doughnut", data:{ labels:["New","Returning"], datasets:[{ data:[nw,ret], backgroundColor:["#4dd0e1","#ff6a00"], borderWidth:0 }] },
+    options:{ cutout:"68%", plugins:{legend:{position:"bottom",labels:{color:"#8b8b9a",boxWidth:10,font:{size:11}}}} } });
+
+  // engagement score
+  var score = Math.max(0, Math.min(100, Math.round(Math.min(sc.avg/90,1)*55 + (1-sc.bounce/100)*45)));
+  var col = score>=70?"#3ddc97":score>=45?"#ffb347":"#ff5d6c";
+  document.getElementById("score").textContent = cur.length ? score : "-";
+  document.getElementById("ring").style.background = "conic-gradient("+col+" "+(score*3.6)+"deg,#22222d 0)";
+  document.getElementById("score-note").textContent = !cur.length ? "Waiting for visits" : score>=70 ? "Visitors are engaged." : score>=45 ? "Room to grow: many visitors leave quickly." : "High early exits. Pages need work.";
+
+  // pages table
+  var pg = {}; cur.forEach(function(r){ pg[r.p]=pg[r.p]||{n:0,s:0}; pg[r.p].n++; pg[r.p].s+=r.s; });
+  var under = [];
+  document.getElementById("pages").innerHTML = Object.keys(pg).sort(function(a,b){return pg[b].n-pg[a].n;}).map(function(p){
+    var actual = Math.round(pg[p].s/pg[p].n), target = TARGETS[p]||DEFAULT_TARGET, ratio = actual/target;
+    var b = ratio>=1.1 ? ['b-good','Above'] : ratio>=0.85 ? ['b-ok','On target'] : ['b-bad','Below'];
+    if (ratio<0.85) under.push({p:p,actual:actual,target:target});
+    return '<tr><td>'+p+'</td><td>'+pg[p].n+'</td><td>'+actual+'s</td><td>'+target+'s</td><td><span class="badge '+b[0]+'">'+b[1]+'</span></td></tr>';
+  }).join("") || '<tr><td colspan="5" class="sub">No data yet</td></tr>';
+
+  // signals
+  var peak = hourCount.indexOf(Math.max.apply(null,hourCount)), bestDay = dayCount.indexOf(Math.max.apply(null,dayCount));
+  var sig = [];
+  if (cur.length) {
+    sig.push('Peak traffic at <b>'+peak+':00</b>, best day is <b>'+DAYS[bestDay]+'</b>');
+    if (top[0]) sig.push('<b>'+top[0]+'</b> brings '+Math.round(cc[top[0]]/cur.length*100)+'% of visits');
+    sig.push('<b>'+Math.round(ret/(nw+ret||1)*100)+'%</b> of visitors come back');
+    if (under.length) sig.push('<b>'+under.length+' page'+(under.length>1?'s':'')+'</b> below target time, starting with <b>'+under[0].p+'</b>');
+    if (sc.bounce>35) sig.push('Bounce rate is high at <b>'+sc.bounce+'%</b>');
+  } else sig.push("No visits in this range yet");
+  document.getElementById("signals").innerHTML = sig.map(function(s){return '<div class="chip">'+s+'</div>';}).join("");
+
+  window.AAVISIT_STATS = { website:session.domain, range_days:D, total:sc.total, unique:sc.uniq, avg_seconds:sc.avg, bounce_pct:sc.bounce, peak_hour:peak, best_day:DAYS[bestDay],
+    countries: top.map(function(c){return {country:c,visits:cc[c],avg_seconds:Math.round(cs[c]/cc[c])};}),
+    pages: Object.keys(pg).map(function(p){return {page:p,visits:pg[p].n,avg_seconds:Math.round(pg[p].s/pg[p].n),target_seconds:TARGETS[p]||DEFAULT_TARGET};}),
+    hourly: hourCount };
+}
+
+function load() {
+  msg.textContent = "";
+  var demo = document.getElementById("demo").checked;
+  (demo ? fakeData() : fetchReal()).then(function(rows){
+    state.raw = rows; render();
+    document.getElementById("updated").textContent = (demo?"demo":"live")+" · "+new Date().toLocaleTimeString();
+  }).catch(function(e){ msg.textContent = "Load failed: "+e.message; });
+}
+
+document.getElementById("demo").addEventListener("change", load);
+document.getElementById("pills").addEventListener("click", function(e){
+  var b = e.target.closest(".pill"); if(!b) return;
+  [].forEach.call(document.querySelectorAll(".pill"), function(x){x.classList.remove("on");});
+  b.classList.add("on"); state.days = parseInt(b.dataset.d,10); render();
+});
+var WEBHOOK = "YOUR_N8N_INSIGHTS_WEBHOOK_URL";
+
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c]; }); }
+
+function parseAI(text) {
+  var t = String(text).replace(/```json|```/g, "");
+  var a = t.indexOf("{"), b = t.lastIndexOf("}");
+  return JSON.parse(t.slice(a, b + 1));
+}
+
+function renderAI(ai) {
+  var h = '<div style="margin-bottom:12px"><b style="color:#ffb347">Audience profile</b><br>' + esc(ai.audience_profile) + '</div>';
+  if (ai.key_findings && ai.key_findings.length) {
+    h += '<div style="margin-bottom:12px"><b style="color:#ffb347">Key findings</b><ul style="margin:6px 0 0;padding-left:18px">' +
+      ai.key_findings.map(function(x){ return '<li>' + esc(x) + '</li>'; }).join("") + '</ul></div>';
+  }
+  if (ai.page_fixes && ai.page_fixes.length) {
+    h += '<div style="margin-bottom:12px"><b style="color:#ffb347">Page fixes</b>' +
+      ai.page_fixes.map(function(p){ return '<div class="chip" style="margin-top:6px"><b>' + esc(p.page) + '</b><br>' + esc(p.issue) + '<br><span style="color:#3ddc97">Fix: ' + esc(p.fix) + '</span></div>'; }).join("") + '</div>';
+  }
+  if (ai.email) {
+    h += '<div><b style="color:#ffb347">Peak-hour email</b> <span style="color:#8b8b9a">· send at ' + esc(ai.email.send_time) + '</span>' +
+      '<div class="chip" style="margin-top:6px"><b>' + esc(ai.email.subject) + '</b><br><br>' + esc(ai.email.body).replace(/\n/g, "<br>") + '</div></div>';
+  }
+  window.AAVISIT_EMAIL = ai.email || null;
+  if (ai.email) {
+    h += '<div style="margin-top:12px"><button id="banner-btn" style="background:#2a2a36">Generate banner</button> <span id="banner-status" style="font-size:12px;color:#8b8b9a"></span><div id="banner-box" style="margin-top:8px"></div></div>';
+    h += '<div style="margin-top:12px"><input id="send-to" type="email" placeholder="Recipient email" style="width:100%;padding:10px;border-radius:8px;border:1px solid #333;background:#0f0f14;color:#eee;margin-bottom:8px"><button id="send-btn">Send this email</button> <span id="send-status" style="font-size:12px;color:#8b8b9a"></span></div>';
+  }
+  document.getElementById("ai").innerHTML = h;
+  window.AAVISIT_BANNER = null;
+  var stoEl = document.getElementById("send-to"); if (stoEl && session.email) stoEl.value = session.email;
+  var sb = document.getElementById("send-btn");
+  if (sb) sb.onclick = sendEmail;
+  var bb = document.getElementById("banner-btn");
+  if (bb) bb.onclick = makeBanner;
+}
+
+var SEND_WEBHOOK = "YOUR_N8N_SEND_WEBHOOK_URL";
+var BANNER_WEBHOOK = "YOUR_N8N_BANNER_WEBHOOK_URL";
+
+function findImageUrl(txt) {
+  var found = [];
+  function walk(v) {
+    if (typeof v === "string") { if (/^https?:\/\//i.test(v)) found.push(v); }
+    else if (v && typeof v === "object") { Object.keys(v).forEach(function (k) { walk(v[k]); }); }
+  }
+  try { walk(JSON.parse(txt)); } catch (e) {
+    var m = String(txt).match(/https?:\/\/[^"'\s\\]+/g); if (m) found = m;
+  }
+  for (var i = 0; i < found.length; i++) { if (/\.(png|jpe?g|webp)(\?|$)/i.test(found[i])) return found[i]; }
+  return found[0] || null;
+}
+
+function makeBanner() {
+  var st = document.getElementById("banner-status"), box = document.getElementById("banner-box");
+  var btn = document.getElementById("banner-btn");
+  btn.disabled = true; st.textContent = "Generating... about 40 seconds."; box.innerHTML = "";
+  var prompt = "Wide email header banner for a website analytics newsletter. Dark background with glowing orange data charts, rising graphs and a subtle world map. Clean, minimal, professional. No text.";
+  fetch(BANNER_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: prompt }) })
+    .then(function (r) { return r.text(); })
+    .then(function (txt) {
+      var url = findImageUrl(txt);
+      if (url && /success/i.test(txt)) {
+        window.AAVISIT_BANNER = url;
+        box.innerHTML = '<img src="' + esc(url) + '" style="width:100%;border-radius:10px" alt="banner">';
+        st.textContent = "Banner ready. It will be included in the email.";
+      } else {
+        st.textContent = "Not ready yet or failed: " + String(txt).slice(0, 220);
+      }
+    })
+    .catch(function (e) { st.textContent = "Failed: " + e.message; })
+    .then(function () { btn.disabled = false; });
+}
+
+function buildEmailHtml(e) {
+  var paras = String(e.body || "").split(/\n\s*\n|\n/).filter(function (p) { return p.trim(); })
+    .map(function (p) { return '<p style="margin:0 0 12px">' + esc(p) + '</p>'; }).join("");
+  var img = window.AAVISIT_BANNER ? '<img src="' + esc(window.AAVISIT_BANNER) + '" alt="" style="width:100%;border-radius:8px;margin-bottom:16px">' : "";
+  return '<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#222;line-height:1.5">' + img + paras + '</div>';
+}
+
+function sendEmail() {
+  var st = document.getElementById("send-status");
+  var to = document.getElementById("send-to").value.trim();
+  var e = window.AAVISIT_EMAIL;
+  if (!e) { st.textContent = "Generate insights first."; return; }
+  if (to.indexOf("@") < 1) { st.textContent = "Enter a valid email."; return; }
+  var btn = document.getElementById("send-btn");
+  btn.disabled = true; st.textContent = "Sending...";
+  fetch(SEND_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: to, subject: e.subject, text: e.body, html: buildEmailHtml(e) }) })
+    .then(function (r) { return r.text(); })
+    .then(function (t) { st.textContent = /"error"/.test(t) ? ("Failed: " + t.slice(0, 160)) : "Sent. Check the inbox (and spam)."; })
+    .catch(function (err) { st.textContent = "Failed: " + err.message; })
+    .then(function () { btn.disabled = false; });
+}
+
+document.getElementById("ai-btn").addEventListener("click", function () {
+  var btn = this, out = document.getElementById("ai");
+  if (!window.AAVISIT_STATS || !window.AAVISIT_STATS.total) { out.textContent = "No data in this range yet. Turn on Sample data or wait for visits."; return; }
+  btn.disabled = true; btn.textContent = "Analyzing...";
+  out.textContent = "The AI is researching your audience. This can take up to a minute.";
+  fetch(WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(window.AAVISIT_STATS) })
+    .then(function (r) { return r.text(); })
+    .then(function (txt) { renderAI(parseAI(txt)); })
+    .catch(function (e) { out.textContent = "AI request failed: " + e.message; })
+    .then(function () { btn.disabled = false; btn.textContent = "Generate AI insights"; });
+});
+
+load();
+setInterval(function(){ if(!document.getElementById("demo").checked) load(); }, 15000);
+</script>
+</body>
+</html>
